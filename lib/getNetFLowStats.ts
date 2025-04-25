@@ -1,8 +1,15 @@
 "use server";
 import { time, timeStamp } from "console";
 import clientPromise from "./mongodb";
-import { Timestamp } from "mongodb";
-import { Granularity, granularityMap, Metric } from "./netFlowTypes";
+import { ObjectId, Timestamp } from "mongodb";
+import {
+  ApplicationProtocols,
+  Granularity,
+  granularityMap,
+  InternetProtocols,
+  Metric,
+  ProtocolType,
+} from "./netFlowTypes";
 
 interface FlowData {
   PROTOCOL: number;
@@ -11,14 +18,11 @@ interface FlowData {
   L4_SRC_PORT: number;
 }
 
-
 export async function getProtocolStats(
-  type: "low" | "app" = "low",
+  type: ProtocolType = "low",
   metric: Metric = "count",
-  timeRange: { start: Date; end: Date } = {
-    start: new Date(0),
-    end: new Date(),
-  }
+  startDate: Date = new Date(0),
+  endDate: Date = new Date()
 ) {
   const db = (await clientPromise).db("netflow_db");
   const collection = db.collection<FlowData>("netflow_records");
@@ -28,77 +32,74 @@ export async function getProtocolStats(
 
   const pipeline = [
     {
-      $addFields: {
-        app_protocol: {
-          $switch: {
-            branches: [
-              {
-                case: {
-                  $or: [
-                    { $in: ["$L4_DST_PORT", [80, 8080]] },
-                    { $in: ["$L4_SRC_PORT", [80, 8080]] },
-                  ],
-                },
-                then: "HTTP",
-              },
-              {
-                case: {
-                  $or: [
-                    { $in: ["$L4_DST_PORT", [443]] },
-                    { $in: ["$L4_SRC_PORT", [443]] },
-                  ],
-                },
-                then: "HTTPS",
-              },
-              {
-                case: {
-                  $or: [
-                    { $in: ["$L4_DST_PORT", [53]] },
-                    { $in: ["$L4_SRC_PORT", [53]] },
-                  ],
-                },
-                then: "DNS",
-              },
-              {
-                case: {
-                  $or: [
-                    { $in: ["$L4_DST_PORT", [67, 68]] },
-                    { $in: ["$L4_SRC_PORT", [67, 68]] },
-                  ],
-                },
-                then: "DHCP",
-              },
-              {
-                case: {
-                  $or: [
-                    { $in: ["$L4_DST_PORT", [123]] },
-                    { $in: ["$L4_SRC_PORT", [123]] },
-                  ],
-                },
-                then: "NTP",
-              },
-              {
-                case: {
-                  $or: [
-                    { $in: ["$L4_DST_PORT", [22]] },
-                    { $in: ["$L4_SRC_PORT", [22]] },
-                  ],
-                },
-                then: "SSH",
-              },
-            ],
-            default: "Other",
-          },
+      $match: {
+        timestamp: {
+          $gte: startDate,
+          $lte: endDate,
         },
       },
     },
     {
+      $addFields: {
+        app_protocol: {
+          $let: {
+            vars: {
+              protoMap: ApplicationProtocols,
+            },
+            in: {
+              $switch: {
+                branches: Object.entries(ApplicationProtocols).map(
+                  ([key, val]) => ({
+                    case: {
+                      $or: [
+                        { $in: ["$L4_DST_PORT", val] },
+                        { $in: ["$L4_SRC_PORT", val] },
+                      ],
+                    },
+                    then: key,
+                  })
+                ),
+                default: "Other",
+              },
+            },
+          },
+        },
+        protocol_name: {
+          $let: {
+            vars: {
+              protoMap: InternetProtocols,
+            },
+            in: {
+              $switch: {
+                branches: Object.entries(InternetProtocols).map(
+                  ([key, val]) => ({
+                    case: { $eq: ["$PROTOCOL", parseInt(key)] },
+                    then: val,
+                  })
+                ),
+                default: "Unknown",
+              },
+            },
+          },
+        },
+      },
+    },
+    ...(useAppProtocols
+      ? [
+          {
+            $match: {
+              app_protocol: { $ne: "Other" },
+            },
+          },
+        ]
+      : []),
+    {
       $group: {
-        _id: useAppProtocols ? "$app_protocol" : "$PROTOCOL",
+        _id: useAppProtocols ? "$app_protocol" : "$protocol_name",
         value: useBytes ? { $sum: "$IN_BYTES" } : { $sum: 1 },
       },
     },
-    { $sort: { value: -1 } },
+    { $sort: { _id: 1 } },
   ];
 
   const results = await collection.aggregate(pipeline).toArray();
@@ -287,8 +288,7 @@ export const getAggregatedNetFlowVolume = async (granularity: Granularity) => {
   ];
 
   const result2 = await collection.aggregate(pipeline2).toArray();
-  const data2:
-   {
+  const data2: {
     timeStart: Date;
     timeEnd: Date;
     duration: number;
@@ -300,7 +300,6 @@ export const getAggregatedNetFlowVolume = async (granularity: Granularity) => {
     volume: item.IN_BYTES,
   }));
 
-  
   const finalResult: { time: Date; amount: number }[] = data.map((item) => {
     // data2
     //   .filter((item2) => {
@@ -349,10 +348,10 @@ export const getAggregatedNetFlowVolume = async (granularity: Granularity) => {
     //     }
     //   });
 
-      return {
-        time: item.timeStart,
-        amount: item.value,
-      };
+    return {
+      time: item.timeStart,
+      amount: item.value,
+    };
   });
 
   console.log(finalResult);

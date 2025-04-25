@@ -136,7 +136,10 @@ const NetFlowLineChart: React.FC<{
   return (
     <LineChart
       dataset={data.filter((item) => {
-        return item.time >= startDate && item.time <= endDate;
+        return (
+          item.time >= new Date(startDate.getTime() - 12 * 60 * 60 * 1000) &&
+          item.time <= new Date(endDate.getTime() + 12 * 60 * 60 * 1000)
+        );
       })}
       xAxis={[
         {
@@ -147,7 +150,12 @@ const NetFlowLineChart: React.FC<{
         },
       ]}
       series={[
-        { dataKey: "amount", area: true, valueFormatter: volumeFormatter, showMark: false },
+        {
+          dataKey: "amount",
+          area: true,
+          valueFormatter: volumeFormatter,
+          showMark: false,
+        },
       ]}
       height={300}
       width={800}

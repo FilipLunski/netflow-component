@@ -16,16 +16,17 @@ import { DateTimePicker } from "@mui/x-date-pickers/DateTimePicker";
 import { DateTimeField, LocalizationProvider } from "@mui/x-date-pickers";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import dayjs, { Dayjs } from "dayjs";
+import "dayjs/locale/cs";
 
 const granularities: Granularity[] = ["1m", "5m", "30m", "1h", "12h", "1d"];
-
 
 export default function Home() {
   const [granularity, setGranularity] = useState<Granularity>("1h");
   const [metric, setMetric] = useState<Metric>("volume");
   const [dateStart, setDateStart] = useState<Dayjs>(
     dayjs().subtract(
-      granularityMap[granularity].minutes * (granularityMap[granularity].maxSpan - 1),
+      granularityMap[granularity].minutes *
+        (granularityMap[granularity].maxSpan - 1),
       "minute"
     )
   );
@@ -69,7 +70,8 @@ export default function Home() {
     ) {
       setDateEnd(
         dateStart.add(
-          granularityMap[granularity].minutes * (granularityMap[granularity].maxSpan - 1),
+          granularityMap[granularity].minutes *
+            (granularityMap[granularity].maxSpan - 1),
           "minute"
         )
       );
@@ -86,7 +88,8 @@ export default function Home() {
     ) {
       setDateStart(
         dateEnd.subtract(
-          granularityMap[granularity].minutes * (granularityMap[granularity].maxSpan - 1),
+          granularityMap[granularity].minutes *
+            (granularityMap[granularity].maxSpan - 1),
           "minute"
         )
       );
@@ -101,7 +104,8 @@ export default function Home() {
     ) {
       setDateStart(
         dateEnd.subtract(
-          granularityMap[granularity].minutes * (granularityMap[granularity].maxSpan - 1),
+          granularityMap[granularity].minutes *
+            (granularityMap[granularity].maxSpan - 1),
           "minute"
         )
       );
@@ -109,26 +113,42 @@ export default function Home() {
   }, [granularity]);
 
   const handleNextClick = () => {
-    const newStartDate = dateStart.add(dateEnd.diff(dateStart, "minute")/2, "minute");
-    const newEndDate = dateEnd.add(dateEnd.diff(dateStart, "minute")/2, "minute");
+    const newStartDate = dateStart.add(
+      dateEnd.diff(dateStart, "minute") / 2,
+      "minute"
+    );
+    const newEndDate = dateEnd.add(
+      dateEnd.diff(dateStart, "minute") / 2,
+      "minute"
+    );
     setDateStart(newStartDate);
     setDateEnd(newEndDate);
   };
 
   const handlePrevClick = () => {
-    const newStartDate = dateStart.subtract(dateEnd.diff(dateStart, "minute")/2, "minute");
-    const newEndDate = dateEnd.subtract(dateEnd.diff(dateStart, "minute")/2, "minute");
+    const newStartDate = dateStart.subtract(
+      dateEnd.diff(dateStart, "minute") / 2,
+      "minute"
+    );
+    const newEndDate = dateEnd.subtract(
+      dateEnd.diff(dateStart, "minute") / 2,
+      "minute"
+    );
     setDateStart(newStartDate);
     setDateEnd(newEndDate);
   };
 
   return (
     <main className="h-screen w-screen bg-white">
-      <div className="flex flex-row items-center justify-center">
-        <Button variant="contained" className="mx-2" onClick={handlePrevClick}>PREV</Button>
-        <Button variant="contained" className="mx-2" onClick={handleNextClick} >NEXT</Button>
-        </div>
-      <div className="flex flex-col items-center justify-center">
+      <div className="flex flex-row gap-4 py-3 items-center justify-center">
+        <Button variant="contained" onClick={handlePrevClick}>
+          PREV
+        </Button>
+        <Button variant="contained" onClick={handleNextClick}>
+          NEXT
+        </Button>
+      </div>
+      <div className="flex flex-col items-center justify-center text-black">
         <NetFlowLineChart
           granularity={granularity}
           metric={metric}
@@ -137,7 +157,7 @@ export default function Home() {
           onStartDateChange={onStartDateChange}
           onEndDateChange={onEndDateChange}
         />
-        <div className="flex flex-row items-center justify-center">
+        <div className="flex flex-row gap-4 items-center justify-center">
           <RadioGroup
             aria-labelledby="demo-radio-buttons-group-label"
             onChange={handleMetricChange}
@@ -173,7 +193,7 @@ export default function Home() {
             })}
           </Select>
 
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="cs">
             <DateTimePicker
               label="Start"
               value={dateStart}
