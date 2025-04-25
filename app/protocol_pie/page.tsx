@@ -45,7 +45,9 @@ export default function Home() {
     setMetric(newMetric);
   };
 
-  const handleProtocolTypeChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleProtocolTypeChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
     const newProtocolType = event.target.value as ProtocolType;
     setProtocolType(newProtocolType);
   };
@@ -71,6 +73,7 @@ export default function Home() {
 
   return (
     <main className="h-screen w-screen bg-white">
+      <div className="flex flex-row gap-4 py-3 items-center justify-center"></div>
       <div className="flex flex-col items-center justify-center">
         <NetFlowPieChart
           protocolType={protocolType}
@@ -79,7 +82,7 @@ export default function Home() {
           endDate={dateEnd.toDate()}
         />
         <div className="flex flex-row gap-4 items-center justify-center text-black">
-        <RadioGroup
+          <RadioGroup
             onChange={handleMetricChange}
             value={metric}
             name="radio-buttons-group"
@@ -94,11 +97,12 @@ export default function Home() {
               control={<Radio />}
               label="Flows count"
             />
-          </RadioGroup><RadioGroup
+          </RadioGroup>
+          <RadioGroup
             onChange={handleProtocolTypeChange}
             value={protocolType}
             name="radio-buttons-group"
-              // style={{ color:"black"}}
+            // style={{ color:"black"}}
           >
             <FormControlLabel
               value="low"
@@ -108,7 +112,7 @@ export default function Home() {
             <FormControlLabel
               value="app"
               control={<Radio />}
-              label="Layer 5-7"
+              label="Layer 6-7"
             />
           </RadioGroup>
 
