@@ -96,7 +96,7 @@ export async function getProtocolStats(
     {
       $group: {
         _id: useAppProtocols ? "$app_protocol" : "$protocol_name",
-        value: useBytes ? { $sum: "$IN_BYTES" } : { $sum: 1 },
+        value: useBytes ? { $sum: "$IN_BYTES" } : { $sum: "$IN_PKTS" },
       },
     },
     { $sort: { _id: 1 } },
@@ -180,7 +180,7 @@ export const getAggregatedNetFlowCount = async (granularity: Granularity) => {
     {
       $group: {
         _id: "$truncatedTime",
-        value: { $count: {} },
+        value: { $sum: "$IN_PKTS" },
       },
     },
     {
@@ -354,6 +354,74 @@ export const getAggregatedNetFlowVolume = async (granularity: Granularity) => {
     };
   });
 
+  console.log(finalResult);
+
+  return finalResult;
+};
+
+export const getTopTalkers = async (
+  n: number,
+  metric: Metric,
+  startDate: Date,
+  endDate: Date
+) => {
+  const db = (await clientPromise).db("netflow_db");
+  const collection = db.collection<FlowData>("netflow_records");
+
+  const pipeline = [
+    {
+      $match: {
+        timestamp: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+      },
+    },
+    {
+      $project: {
+        address: [
+          "$IPV4_SRC_ADDR",
+          "$IPV4_DST_ADDR",
+          "$IPV6_SRC_ADDR",
+          "$IPV6_DST_ADDR",
+        ],
+        IN_BYTES: 1,
+        IN_PKTS: 1,
+      },
+    },
+    {
+      $unwind: "$address",
+    },
+    {
+      $match: {
+        address: {
+          $ne: null,
+        },
+      },
+    },
+    {
+      $group: {
+        _id: "$address",
+        amount:
+          metric === "volume" ? { $sum: "$IN_BYTES" } : { $sum: "$IN_PKTS" },
+      },
+    },
+    {
+      $sort: { amount: -1 },
+    },
+    {
+      $limit: n, // Replace N with how many top talkers you want
+    },
+  ];
+
+  const result = await collection.aggregate(pipeline).toArray();
+
+  let finalResult: { address: string; amount: number }[] = result.map(
+    (item) => ({
+      address: item._id,
+      amount: item.amount,
+    })
+  );
   console.log(finalResult);
 
   return finalResult;

@@ -1,19 +1,13 @@
 "use client";
-import Image from "next/image";
-import NetFlowPieChart from "../../components/charts/PieChart";
+import NetFlowBarChart from "@/components/charts/BarChart";
 
 import {
-  Button,
   FormControlLabel,
-  MenuItem,
   Radio,
   RadioGroup,
-  Select,
-  SelectChangeEvent,
 } from "@mui/material";
 
 import {
-  DateTimeField,
   LocalizationProvider,
   DateTimePicker,
 } from "@mui/x-date-pickers";
@@ -27,7 +21,7 @@ import { useEffect, useState } from "react";
 export default function Home() {
   const [metric, setMetric] = useState<Metric>("volume");
   const [protocolType, setProtocolType] = useState<ProtocolType>("low");
-  const [dateStart, setDateStart] = useState<Dayjs>(dayjs().subtract(7, "day"));
+  const [dateStart, setDateStart] = useState<Dayjs>(dayjs().subtract(1, "months"));
   const [dateEnd, setDateEnd] = useState<Dayjs>(dayjs());
 
   useEffect(() => {
@@ -45,13 +39,6 @@ export default function Home() {
     setMetric(newMetric);
   };
 
-  const handleProtocolTypeChange = (
-    event: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const newProtocolType = event.target.value as ProtocolType;
-    setProtocolType(newProtocolType);
-  };
-
   const handleDateStartChange = (newValue: Dayjs | null) => {
     if (newValue) {
       setDateStart(newValue);
@@ -64,19 +51,11 @@ export default function Home() {
     }
   };
 
-  const onStartDateChange = (date: Date) => {
-    setDateStart(dayjs(date));
-  };
-  const onEndDateChange = (date: Date) => {
-    setDateEnd(dayjs(date));
-  };
-
   return (
     <main className="h-screen w-screen bg-white">
       <div className="flex flex-row gap-4 py-3 items-center justify-center"></div>
       <div className="flex flex-col items-center justify-center">
-        <NetFlowPieChart
-          protocolType={protocolType}
+        <NetFlowBarChart
           metric={metric}
           startDate={dateStart.toDate()}
           endDate={dateEnd.toDate()}
@@ -98,23 +77,7 @@ export default function Home() {
               label="Packet count"
             />
           </RadioGroup>
-          <RadioGroup
-            onChange={handleProtocolTypeChange}
-            value={protocolType}
-            name="radio-buttons-group"
-            // style={{ color:"black"}}
-          >
-            <FormControlLabel
-              value="low"
-              control={<Radio />}
-              label="3. Layer"
-            />
-            <FormControlLabel
-              value="app"
-              control={<Radio />}
-              label="4. Layer"
-            />
-          </RadioGroup>
+         
 
           <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="cs">
             <DateTimePicker
@@ -133,8 +96,5 @@ export default function Home() {
         </div>
       </div>
     </main>
-    /* <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        
-      </footer> */
   );
 }

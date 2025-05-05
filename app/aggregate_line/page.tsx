@@ -9,6 +9,7 @@ import {
   RadioGroup,
   Select,
   SelectChangeEvent,
+  TextField,
 } from "@mui/material";
 import { useEffect, useRef, useState } from "react";
 
@@ -172,7 +173,7 @@ export default function Home() {
             <FormControlLabel
               value="count"
               control={<Radio />}
-              label="Flows count"
+              label="Packet count"
             />
           </RadioGroup>
           <Select
@@ -208,6 +209,7 @@ export default function Home() {
             />
           </LocalizationProvider>
         </div>
+        <TextField id="outlined-basic" label="Filter address" variant="outlined" />
       </div>
     </main>
   );

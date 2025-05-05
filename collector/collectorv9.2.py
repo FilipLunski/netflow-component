@@ -115,24 +115,17 @@ FIELD_TYPES = {
 
 
 converters = {
-    1: lambda x: struct.unpack("!I", x)[0],  # IN_BYTES
-    2: lambda x: struct.unpack("!I", x)[0],  # IN_PKTS
-    4: lambda x: x[0],  # PROTOCOL
-    5: lambda x: x[0],  # SRC_TOS
-    7: lambda x: struct.unpack("!H", x)[0],  # L4_SRC_PORT
     8: lambda x: str(ipaddress.ip_address(x)),  # IPV4_SRC_ADDR
-    10: lambda x: struct.unpack("!I", x)[0],  # INPUT_SNMP
-    11: lambda x: struct.unpack("!H", x)[0],  # L4_DST_PORT
     12: lambda x: str(ipaddress.ip_address(x)),  # IPV4_DST_ADDR
-    14: lambda x: struct.unpack("!I", x)[0],  # OUTPUT_SNMP
     15: lambda x: str(ipaddress.ip_address(x)),  # IPV4_NEXT_HOP
-    21: lambda x: struct.unpack("!I", x)[0],  # LAST_SWITCHED
-    22: lambda x: struct.unpack("!I", x)[0],  # FIRST_SWITCHED
     32: lambda x: str(ipaddress.ip_address(x)),  # SRC_MASK
     33: lambda x: str(ipaddress.ip_address(x)),  # DST_MASK
     34: lambda x: str(ipaddress.ip_address(x)),  # IPV6_SRC_ADDR
     36: lambda x: str(ipaddress.ip_address(x)),  # IPV6_DST_ADDR
-    61: lambda x: x[0]  # DIRECTION
+    56: lambda x: ':'.join(f'{x:012x}'[i:i+2] for i in range(0, 12, 2)),    # IN_SRC_MAC
+    57: lambda x: ':'.join(f'{x:012x}'[i:i+2] for i in range(0, 12, 2)),    # OUT_DST_MAC
+    80: lambda x: ':'.join(f'{x:012x}'[i:i+2] for i in range(0, 12, 2)),    # IN_DST_MAC
+    81: lambda x: ':'.join(f'{x:012x}'[i:i+2] for i in range(0, 12, 2)),    # OUT_SRC_MAC
 }
 
 
