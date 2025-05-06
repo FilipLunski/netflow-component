@@ -20,7 +20,7 @@ interface FlowData {
 
 export async function getProtocolStats(
   type: ProtocolType = "low",
-  metric: Metric = "count",
+  metric: Metric = "packets",
   startDate: Date = new Date(0),
   endDate: Date = new Date()
 ) {
@@ -28,7 +28,7 @@ export async function getProtocolStats(
   const collection = db.collection<FlowData>("netflow_records");
 
   const useAppProtocols = type === "app";
-  const useBytes = metric === "volume";
+  const useBytes = metric === "bytes";
 
   const pipeline = [
     {
@@ -139,11 +139,27 @@ function truncateDate(date: Date, granularity: Granularity): Date {
   return d;
 }
 
-export const getAggregatedNetFlowCount = async (granularity: Granularity) => {
+export const getVolumOverTime = async (
+  granularity: Granularity,
+  metric: Metric,
+  startDate: Date,
+  endDate: Date,
+  ipAddress: string = ""
+) => {
   const db = (await clientPromise).db("netflow_db");
   const collection = db.collection<FlowData>("netflow_records");
-
-  // Map granularity to Mongo units + bin sizes
+  console.log(
+    "Granularity: ",
+    granularity,
+    "; Metric: ",
+    metric,
+    "; Start Date: ",
+    startDate,
+    "; End Date: ",
+    endDate,
+    "; IP Address: ",
+    ipAddress
+  );
 
   const { unit, binSize, minutes } = granularityMap[granularity];
 
@@ -153,14 +169,70 @@ export const getAggregatedNetFlowCount = async (granularity: Granularity) => {
   const pipeline = [
     {
       $match: {
+        timestamp: {
+          $gte: startDate,
+          $lte: endDate,
+        },
+      },
+    },
+
+    {
+      $match: {
         $expr: {
-          $lt: [
+          $or: [
+            { $eq: ["$IPV4_SRC_ADDR", ipAddress] },
+            { $eq: ["$IPV4_DST_ADDR", ipAddress] },
+            { $eq: ["$IPV6_SRC_ADDR", ipAddress] },
+            { $eq: ["$IPV6_DST_ADDR", ipAddress] },
+            { $eq: [ipAddress, ""] },
+          ],
+        },
+      },
+    },
+    {
+      $addFields: {
+        direction: {
+          $cond: [
             {
-              $abs: {
-                $subtract: ["$FIRST_SWITCHED", "$LAST_SWITCHED"],
-              },
+              $and: [
+                {
+                  $regexMatch: {
+                    input: "$IPV4_SRC_ADDR",
+                    regex: /^10\.0\.1\./,
+                  },
+                },
+                {
+                  $regexMatch: {
+                    input: "$IPV4_DST_ADDR",
+                    regex: /^10\.0\.1\./,
+                  },
+                },
+              ],
             },
-            milisBound,
+            "internal",
+            {
+              $cond: [
+                {
+                  $regexMatch: {
+                    input: "$IPV4_SRC_ADDR",
+                    regex: /^10\.0\.1\./,
+                  },
+                },
+                "outbound",
+                {
+                  $cond: [
+                    {
+                      $regexMatch: {
+                        input: "$IPV4_DST_ADDR",
+                        regex: /^10\.0\.1\./,
+                      },
+                    },
+                    "inbound",
+                    "external",
+                  ],
+                },
+              ],
+            },
           ],
         },
       },
@@ -178,25 +250,58 @@ export const getAggregatedNetFlowCount = async (granularity: Granularity) => {
       },
     },
     {
-      $group: {
-        _id: "$truncatedTime",
-        value: { $sum: "$IN_PKTS" },
+      $match: {
+        direction: { $in: ["inbound", "outbound", "internal"] },
       },
     },
     {
-      $sort: { _id: 1 },
+      $group: {
+        _id: {
+          time: "$truncatedTime",
+          direction: "$direction",
+        },
+        value:
+          metric === "bytes" ? { $sum: "$IN_BYTES" } : { $sum: "$IN_PKTS" },
+      },
+    },
+    {
+      $group: {
+        _id: "$_id.time",
+        inbound: {
+          $sum: {
+            $cond: [{ $eq: ["$_id.direction", "inbound"] }, "$value", 0],
+          },
+        },
+        outbound: {
+          $sum: {
+            $cond: [{ $eq: ["$_id.direction", "outbound"] }, "$value", 0],
+          },
+        },
+        internal: {
+          $sum: {
+            $cond: [{ $eq: ["$_id.direction", "internal"] }, "$value", 0],
+          },
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        time: "$_id",
+        inbound: 1,
+        outbound: 1,
+        internal: 1,
+      },
+    },
+    {
+      $sort: { time: 1 },
     },
   ];
 
   const result = await collection.aggregate(pipeline).toArray();
+  console.log(result);
 
-  const data: { time: Date; amount: number }[] = result.map((item) => ({
-    time: item._id,
-    amount: item.value,
-  }));
-  console.log(data);
-
-  return data;
+  return result;
 };
 
 export const getAggregatedNetFlowVolume = async (granularity: Granularity) => {
@@ -379,12 +484,16 @@ export const getTopTalkers = async (
     },
     {
       $project: {
-        address: [
-          "$IPV4_SRC_ADDR",
-          "$IPV4_DST_ADDR",
-          "$IPV6_SRC_ADDR",
-          "$IPV6_DST_ADDR",
-        ],
+        address: {
+          $setUnion: [
+            [
+              "$IPV4_SRC_ADDR",
+              "$IPV4_DST_ADDR",
+              "$IPV6_SRC_ADDR",
+              "$IPV6_DST_ADDR",
+            ],
+          ],
+        },
         IN_BYTES: 1,
         IN_PKTS: 1,
       },
@@ -403,14 +512,14 @@ export const getTopTalkers = async (
       $group: {
         _id: "$address",
         amount:
-          metric === "volume" ? { $sum: "$IN_BYTES" } : { $sum: "$IN_PKTS" },
+          metric === "bytes" ? { $sum: "$IN_BYTES" } : { $sum: "$IN_PKTS" },
       },
     },
     {
       $sort: { amount: -1 },
     },
     {
-      $limit: n, // Replace N with how many top talkers you want
+      $limit: n,
     },
   ];
 

@@ -28,7 +28,7 @@ const NetFlowPieChart: React.FC<{
     if (value === null) {
       return null;
     }
-    if (metric === "count") {
+    if (metric === "packets") {
       if (value < 1000) {
         return value.toString();
       }

@@ -25,7 +25,7 @@ import { Metric, ProtocolType } from "@/lib/netFlowTypes";
 import { useEffect, useState } from "react";
 
 export default function Home() {
-  const [metric, setMetric] = useState<Metric>("volume");
+  const [metric, setMetric] = useState<Metric>("bytes");
   const [protocolType, setProtocolType] = useState<ProtocolType>("low");
   const [dateStart, setDateStart] = useState<Dayjs>(dayjs().subtract(7, "day"));
   const [dateEnd, setDateEnd] = useState<Dayjs>(dayjs());
@@ -88,14 +88,14 @@ export default function Home() {
             name="radio-buttons-group"
           >
             <FormControlLabel
-              value="volume"
+              value="bytes"
               control={<Radio />}
-              label="Volume"
+              label="Bytes"
             />
             <FormControlLabel
-              value="count"
+              value="packets"
               control={<Radio />}
-              label="Packet count"
+              label="Packets"
             />
           </RadioGroup>
           <RadioGroup

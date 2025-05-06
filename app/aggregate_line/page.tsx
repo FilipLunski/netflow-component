@@ -22,13 +22,14 @@ import "dayjs/locale/cs";
 const granularities: Granularity[] = ["1m", "5m", "30m", "1h", "12h", "1d"];
 
 export default function Home() {
-  const [granularity, setGranularity] = useState<Granularity>("1h");
-  const [metric, setMetric] = useState<Metric>("volume");
+  const [granularity, setGranularity] = useState<Granularity>("30m");
+  const [metric, setMetric] = useState<Metric>("bytes");
+  const [ipAddress, setIpAddress] = useState<string>("");
   const [dateStart, setDateStart] = useState<Dayjs>(
     dayjs().subtract(
       granularityMap[granularity].minutes *
-        (granularityMap[granularity].maxSpan - 1),
-      "minute"
+      (granularityMap[granularity].maxSpan - 1),
+      "minutes"
     )
   );
   const [dateEnd, setDateEnd] = useState<Dayjs>(dayjs());
@@ -55,11 +56,8 @@ export default function Home() {
     }
   };
 
-  const onStartDateChange = (date: Date) => {
-    setDateStart(dayjs(date));
-  };
-  const onEndDateChange = (date: Date) => {
-    setDateEnd(dayjs(date));
+  const handleIpAddressChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setIpAddress(event.target.value);
   };
 
   useEffect(() => {
@@ -155,8 +153,7 @@ export default function Home() {
           metric={metric}
           startDate={dateStart.toDate()}
           endDate={dateEnd.toDate()}
-          onStartDateChange={onStartDateChange}
-          onEndDateChange={onEndDateChange}
+          ipAddress={ipAddress}
         />
         <div className="flex flex-row gap-4 items-center justify-center">
           <RadioGroup
@@ -166,14 +163,14 @@ export default function Home() {
             name="radio-buttons-group"
           >
             <FormControlLabel
-              value="volume"
+              value="bytes"
               control={<Radio />}
-              label="Volume"
+              label="Bytes"
             />
             <FormControlLabel
-              value="count"
+              value="packets"
               control={<Radio />}
-              label="Packet count"
+              label="Packet"
             />
           </RadioGroup>
           <Select
@@ -209,7 +206,7 @@ export default function Home() {
             />
           </LocalizationProvider>
         </div>
-        <TextField id="outlined-basic" label="Filter address" variant="outlined" />
+        <TextField id="outlined-basic" label="Filter address" variant="outlined"  value={ipAddress} onChange={handleIpAddressChange} />
       </div>
     </main>
   );

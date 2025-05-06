@@ -13,6 +13,9 @@ export default function Home() {
         <Button variant="contained">
           <Link href="/aggregate_line">Trafic over time</Link>
         </Button>
+        <Button variant="contained">
+          <Link href="/topn">Top N</Link>
+        </Button>
       </div>
     </main>
     /* <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">

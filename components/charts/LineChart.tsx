@@ -1,10 +1,7 @@
 "use client";
 import React from "react";
 import { LineChart } from "@mui/x-charts/LineChart";
-import {
-  getAggregatedNetFlowCount,
-  getAggregatedNetFlowVolume,
-} from "@/lib/getNetFLowStats";
+import { getVolumOverTime } from "@/lib/getNetFLowStats";
 import { Granularity, Metric } from "@/lib/netFlowTypes";
 import { SeriesValueFormatter } from "@mui/x-charts/internals";
 import { start } from "repl";
@@ -56,43 +53,25 @@ const NetFlowLineChart: React.FC<{
   metric: Metric;
   startDate: Date;
   endDate: Date;
-  onStartDateChange: (date: Date) => void;
-  onEndDateChange: (date: Date) => void;
-}> = ({
-  granularity,
-  metric,
-  startDate,
-  endDate,
-  onStartDateChange,
-  onEndDateChange,
-}) => {
+  ipAddress: string;
+}> = ({ granularity, metric, startDate, endDate, ipAddress }) => {
   const [data, setData] = React.useState<any[]>([]);
 
   React.useEffect(() => {
-    console.log("Granularity: ", granularity, "; Metric: ", metric);
-    if (metric === "count") {
-      getAggregatedNetFlowCount(granularity).then(setData);
-    } else if (metric === "volume") {
-      getAggregatedNetFlowVolume(granularity).then(setData);
-    }
-    console.log("Data fetching started for granularity: ", granularity);
-  }, [granularity, metric]);
-
-  React.useEffect(() => {
-    const minDate = new Date(
-      Math.min(...data.map((item) => item.time.getTime()))
+    console.log(
+      "Granularity: ",
+      granularity,
+      "; Metric: ",
+      metric,
+      "; Start Date: ",
+      startDate,
+      "; End Date: ",
+      endDate,
+      "; IP Address: ",
+      ipAddress
     );
-    const maxDate = new Date(
-      Math.max(...data.map((item) => item.time.getTime()))
-    );
-    if (minDate > startDate) {
-      onStartDateChange(minDate);
-    }
-    if (maxDate < endDate) {
-      onEndDateChange(maxDate);
-    }
-    console.log(data);
-  }, [data]);
+    getVolumOverTime(granularity, metric, startDate, endDate, ipAddress).then(setData);
+  }, [granularity, metric, startDate, endDate, ipAddress]);
 
   const volumeFormatter: SeriesValueFormatter<number | null> = (
     value: number | null
@@ -100,7 +79,7 @@ const NetFlowLineChart: React.FC<{
     if (value === null) {
       return null;
     }
-    if (metric === "count") {
+    if (metric === "packets") {
       if (value < 1000) {
         return value.toString();
       }
@@ -135,12 +114,7 @@ const NetFlowLineChart: React.FC<{
 
   return (
     <LineChart
-      dataset={data.filter((item) => {
-        return (
-          item.time >= new Date(startDate.getTime() - 12 * 60 * 60 * 1000) &&
-          item.time <= new Date(endDate.getTime() + 12 * 60 * 60 * 1000)
-        );
-      })}
+      dataset={data}
       xAxis={[
         {
           dataKey: "time",
@@ -151,10 +125,28 @@ const NetFlowLineChart: React.FC<{
       ]}
       series={[
         {
-          dataKey: "amount",
+          dataKey: "inbound",
           area: true,
           valueFormatter: volumeFormatter,
           showMark: false,
+          stack: "total",
+          label: "Inbound",
+        },
+        {
+          dataKey: "outbound",
+          area: true,
+          valueFormatter: volumeFormatter,
+          showMark: false,
+          stack: "total",
+          label: "Outbound",
+        },
+        {
+          dataKey: "internal",
+          area: true,
+          valueFormatter: volumeFormatter,
+          showMark: false,
+          stack: "total",
+          label: "Internal",
         },
       ]}
       height={300}

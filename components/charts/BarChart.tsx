@@ -37,7 +37,7 @@ const NetFlowBarChart: React.FC<{
     if (value === null) {
       return null;
     }
-    if (metric === "count") {
+    if (metric === "packets") {
       if (value < 1000) {
         return value.toString();
       }
@@ -75,7 +75,7 @@ const NetFlowBarChart: React.FC<{
       dataset={data}
       xAxis={[
         {
-          label: metric === "count" ? "Count" : "Volume",
+          label: metric === "packets" ? "Packets" : "Bytes",
         },
       ]}
       yAxis={[{ scaleType: "band", dataKey: "address", width: 100 }]}

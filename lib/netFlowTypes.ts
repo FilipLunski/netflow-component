@@ -1,5 +1,5 @@
 export type Granularity = "1m" | "5m" | "30m" | "1h" | "12h" | "1d";
-export type Metric = "count" | "volume";
+export type Metric = "packets" | "bytes";
 export type ProtocolType = "low" | "app";
 
 export const granularityMap = {
